@@ -225,7 +225,7 @@ connect_config()
 
 clean()
 {
-    rfkill unblock wifi
+    rfkill unblock all
     killall dhcpcd
     killall wpa_supplicant
 }
