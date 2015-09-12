@@ -225,8 +225,7 @@ connect_config()
 
 clean()
 {
-    ## kill all blocking evils
-    /etc/init.d/wicd stop
+    rfkill unblock wifi
     killall dhcpcd
     killall wpa_supplicant
 }
