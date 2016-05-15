@@ -79,7 +79,7 @@ EOF
 parse_args()
 {
     ## Function to parse command line arguments
-    while getopts hsc:o:w: flags;
+    while getopts hksc:o:w: flags;
     do
         case "${flags}" in
 
@@ -99,6 +99,7 @@ parse_args()
             w)
                 NETWORK=$OPTARG;
                 INT=$WLAN;
+                refresh_wlan;
                 ## connect to other wpa wifi network
                 wpa_wifi;
                 ;;
@@ -117,6 +118,12 @@ parse_args()
                 connect_open;
                 ;;
 
+            k)
+                # kill wifi
+                printf "Killing wlan\r\n";
+                kill_wlan;
+                ;;
+
             *)
                 ## unrecognised argument
                 usage;
@@ -131,11 +138,15 @@ parse_args()
 
 connect_open()
 {
-    
-    fake_mac $INT
+   
+    clean;
+    fake_mac $INT;
     
     ## connect to an openNETWORK network
     iwconfig $INT essid "$ESSID"
+    sleep 2
+    iwconfig $INT ap any
+    sleep 2
     getip $INT
 
 }
@@ -181,7 +192,7 @@ restore_mac()
 wifi_scan()
 {
     ## use iwlist to scan for wifi networks
-    WIFI=$(iwlist $WLAN scan | egrep "ESSID|Address|Encryption key|Channel:|Cipher ")
+    WIFI=$(iwlist $WLAN scan ) #| egrep "ESSID|Address ")
 
     printf "$WIFI\r\n"
 
@@ -214,18 +225,14 @@ wpa_wifi()
 
 connect_config()
 {
-
     ## read the config file
-    ## $* is the config file
     echo "need to finish"
-    
-
 }
 
 
 clean()
 {
-    rfkill unblock all
+    rfkill unblock wifi
     killall dhcpcd
     killall wpa_supplicant
 }
@@ -240,6 +247,17 @@ refresh_wlan()
     modprobe iwlwifi
     sleep 1
 }
+
+kill_wlan()
+{
+    ## kill all wifi
+    killall dhcpcd;
+    killall wpa_supplicant;
+    rmmod iwldvm;
+    rmmod iwlwifi;
+    rfkill block all;
+}
+
 
 
 ################################################################################
