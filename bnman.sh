@@ -72,6 +72,7 @@ usage()
      -s: perform a WiFi scan
      -o: connect to network using ifconfig
      -w: connect to network using wpa_supplicant
+     -p: enable privacy (start openvpn + privoxy)
 
 EOF
 }
@@ -79,7 +80,7 @@ EOF
 parse_args()
 {
     ## Function to parse command line arguments
-    while getopts hksc:o:w: flags;
+    while getopts hksc:o:w:p flags;
     do
         case "${flags}" in
 
@@ -122,6 +123,11 @@ parse_args()
                 # kill wifi
                 printf "Killing wlan\r\n";
                 kill_wlan;
+                ;;
+
+            p)
+                pia;
+                privoxy;
                 ;;
 
             *)
@@ -192,7 +198,7 @@ restore_mac()
 wifi_scan()
 {
     ## use iwlist to scan for wifi networks
-    WIFI=$(iwlist $WLAN scan ) #| egrep "ESSID|Address ")
+    WIFI=$(iwlist $WLAN scan  | egrep "ESSID|Address ")
 
     printf "$WIFI\r\n"
 
@@ -221,6 +227,7 @@ wpa_wifi()
     connect_wpa $NETWORK
     sleep 15
     getip $WLAN
+    
 }
 
 connect_config()
@@ -229,12 +236,26 @@ connect_config()
     echo "need to finish"
 }
 
+tor()
+{
+    /etc/init.d/tor start
+}
+
+privoxy()
+{
+    /etc/init.d/privoxy start
+}
+
+pia()
+{
+    /etc/init.d/openvpn start
+}
 
 clean()
 {
-    rfkill unblock wifi
-    killall dhcpcd
-    killall wpa_supplicant
+    rfkill unblock wifi&>/dev/null
+    killall dhcpcd&>/dev/null
+    killall wpa_supplicant&>/dev/null
 }
 
 refresh_wlan()
@@ -251,11 +272,12 @@ refresh_wlan()
 kill_wlan()
 {
     ## kill all wifi
-    killall dhcpcd;
-    killall wpa_supplicant;
-    rmmod iwldvm;
-    rmmod iwlwifi;
-    rfkill block all;
+    killall dhcpcd&>/dev/null;
+    killall wpa_supplicant&>/dev/null;
+    rmmod iwldvm&>/dev/null;
+    rmmod iwlwifi&>/dev/null;
+    rfkill block all&>/dev/null;
+    killall openvpn&>/dev/null;
 }
 
 
