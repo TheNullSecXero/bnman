@@ -41,23 +41,17 @@ EOF
 
 }
 
-
 main()
 {
-
     banner
-
-    ## Is root?
     if [ "$(id -u)" != "0" ]; then
         printf "This script must be run as root\n" 1>&2
         exit
     fi
-
     if [ -z $1 ]; then
         usage
         exit
     fi
-
     parse_args ${@}
 }
 
@@ -79,21 +73,16 @@ EOF
 
 parse_args()
 {
-    ## Function to parse command line arguments
     while getopts hksc:o:w:p flags;
     do
         case "${flags}" in
-
             h)
-                ## invoke usage and exit
                 usage;
                 exit;
                 ;;
 
             s)
-                ## set the interface
                 INT=$WLAN;
-                ## invoke wifi scanning
                 wifi_scan;
                 ;;
 
@@ -101,87 +90,64 @@ parse_args()
                 NETWORK=$OPTARG;
                 INT=$WLAN;
                 refresh_wlan;
-                ## connect to other wpa wifi network
                 wpa_wifi;
                 ;;
 
             c)
-                # to wite
                 NETWORK=$OPTARG;
                 INT=$WLAN;
                 connect_config;
                 ;;
-
             o)
-                # connect to an open network
                 NETWORK=$OPTARG;
                 INT=$WLAN;
                 connect_open;
                 ;;
-
             k)
-                # kill wifi
                 printf "Killing wlan\r\n";
                 kill_wlan;
                 ;;
-
             p)
                 pia;
                 privoxy;
                 ;;
-
             *)
-                ## unrecognised argument
                 usage;
                 exit;
                 ;;
-
         esac
-
     done
     exit
 }
 
 connect_open()
 {
-   
     clean;
     fake_mac $INT;
-    
-    ## connect to an openNETWORK network
     iwconfig $INT essid "$ESSID"
     sleep 2
     iwconfig $INT ap any
     sleep 2
     getip $INT
-
 }
 
 connect_wep()
 {
-    ## connect to a wep network
     iwconfig $INT essid $ESSID key $PASSWORD
 }
 
 connect_wpa()
 {
-    ## use wpa_supplicant tp connect to the wifi network
     wpa_supplicant -i$WLAN -B -Dnl80211 -c"$*"
 }
 
 getip()
 {
-    ## launcINTh dhcpcd with fake id info
     dhcpcd $WLAN
-
-    ## launch dhclient
-    #dhclient $WLAN
-
 }
 
 fake_mac()
 {
-    ## generate a fake address for the interface
     ifconfig $INT down
     macchanger -r $INT
     ifconfig $INT up
@@ -189,7 +155,6 @@ fake_mac()
 
 restore_mac()
 {
-    ## restore the original mac for the interface
     ifconfig $INT down
     macchanger -p $INT
     ifconfig $INT up
@@ -197,19 +162,14 @@ restore_mac()
 
 wifi_scan()
 {
-    ## use iwlist to scan for wifi networks
     WIFI=$(iwlist $WLAN scan  | egrep "ESSID|Address ")
-
     printf "$WIFI\r\n"
 
 }
 
 home_wifi()
 {
-    ## get new mac
     fake_mac
-
-    ## connect to home home wifi
     connect_wpa $HOME
     sleep 15
     getip $WLAN
@@ -217,22 +177,15 @@ home_wifi()
 
 wpa_wifi()
 {
-    ## clean
     clean
-
-    ## get a new mac
     fake_mac
-
-    ## connect to other wifi network
     connect_wpa $NETWORK
     sleep 15
     getip $WLAN
-    
 }
 
 connect_config()
 {
-    ## read the config file
     echo "need to finish"
 }
 
@@ -243,11 +196,17 @@ tor()
 
 privoxy()
 {
-    /etc/init.d/privoxy start
+    /etc/init.d/privoxy restart
 }
 
 pia()
 {
+    /etc/init.d/openvpn stop
+    TOTAL_CONFIGS=$(ls /etc/openvpn/pia/*ovpn | wc -l)
+    SELECT=$((1 + $RANDOM % $TOTAL_CONFIGS ))
+    CHOSEN=$(ls /etc/openvpn/pia/*ovpn | nl | grep $SELECT | head -1 )
+    CONFIG=$(echo $CHOSEN | cut -d ' ' -f 2)
+    cp $CONFIG /etc/openvpn/openvpn.conf
     /etc/init.d/openvpn start
 }
 
@@ -260,18 +219,14 @@ clean()
 
 refresh_wlan()
 {
-    ## removing loaded drivers
     rmmod iwldvm
     rmmod iwlwifi
-
-    ## loading wifi drivers
     modprobe iwlwifi
     sleep 1
 }
 
 kill_wlan()
 {
-    ## kill all wifi
     killall dhcpcd&>/dev/null;
     killall wpa_supplicant&>/dev/null;
     rmmod iwldvm&>/dev/null;
@@ -280,9 +235,4 @@ kill_wlan()
     killall openvpn&>/dev/null;
 }
 
-
-
-################################################################################
-## program starts here                                                        ##
-################################################################################
 main ${@}
