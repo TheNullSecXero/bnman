@@ -66,14 +66,14 @@ usage()
      -s: perform a WiFi scan
      -o: connect to network using ifconfig
      -w: connect to network using wpa_supplicant
-     -p: enable privacy (start openvpn + privoxy)
+     -p: enable privacy (start openvpn)
 
 EOF
 }
 
 parse_args()
 {
-    while getopts hksc:o:w:p flags;
+    while getopts hksco:w:p flags;
     do
         case "${flags}" in
             h)
@@ -94,9 +94,7 @@ parse_args()
                 ;;
 
             c)
-                NETWORK=$OPTARG;
-                INT=$WLAN;
-                connect_config;
+                clean;
                 ;;
             o)
                 NETWORK=$OPTARG;
@@ -105,11 +103,10 @@ parse_args()
                 ;;
             k)
                 printf "Killing wlan\r\n";
-                kill_wlan;
+                clean;
                 ;;
             p)
                 pia;
-                privoxy;
                 ;;
             *)
                 usage;
@@ -138,7 +135,7 @@ connect_wep()
 
 connect_wpa()
 {
-    wpa_supplicant -i$WLAN -B -Dnl80211 -c"$*"
+    wpa_supplicant -i$WLAN -B -c"$*"
 }
 
 getip()
@@ -148,6 +145,8 @@ getip()
 
 fake_mac()
 {
+    modprobe iwlwifi
+    sleep 2
     ifconfig $INT down
     macchanger -r $INT
     ifconfig $INT up
@@ -162,8 +161,9 @@ restore_mac()
 
 wifi_scan()
 {
-    WIFI=$(iwlist $WLAN scan  | egrep "ESSID|Address ")
-    printf "$WIFI\r\n"
+    #WIFI=$(iwlist $WLAN scan  | egrep "ESSID|Address ")
+    WIFI=$(iw dev $WLAN scan | egrep "SSID|BSS|Group cipher")
+    printf "%s\r\n"  "$WIFI"
 
 }
 
@@ -194,11 +194,6 @@ tor()
     /etc/init.d/tor start
 }
 
-privoxy()
-{
-    /etc/init.d/privoxy restart
-}
-
 pia()
 {
     /etc/init.d/openvpn stop
@@ -212,9 +207,14 @@ pia()
 
 clean()
 {
-    rfkill unblock wifi&>/dev/null
-    killall dhcpcd&>/dev/null
-    killall wpa_supplicant&>/dev/null
+    rmmod cdc_ncm
+    rmmod iwldvm
+    rmmod iwlwifi
+    rmmod e1000e
+    rfkill unblock wifi
+    killall dhcpcd
+    killall wpa_supplicant
+    killall openvpn
 }
 
 refresh_wlan()
@@ -227,12 +227,12 @@ refresh_wlan()
 
 kill_wlan()
 {
-    killall dhcpcd&>/dev/null;
-    killall wpa_supplicant&>/dev/null;
-    rmmod iwldvm&>/dev/null;
-    rmmod iwlwifi&>/dev/null;
-    rfkill block all&>/dev/null;
-    killall openvpn&>/dev/null;
+    killall dhcpcd;
+    killall wpa_supplicant;
+    rmmod iwldvm;
+    rmmod iwlwifi;
+    rfkill block all;
+    killall openvpn;
 }
 
 main ${@}
